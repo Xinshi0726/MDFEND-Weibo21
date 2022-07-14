@@ -17,7 +17,7 @@ class MLP(torch.nn.Module):
             layers.append(torch.nn.Dropout(p=dropout))
             input_dim = embed_dim
         if output_layer:
-            layers.append(torch.nn.Linear(input_dim, 1))
+            layers.append(torch.nn.Linear(input_dim, 71))
         self.mlp = torch.nn.Sequential(*layers)
 
     def forward(self, x):

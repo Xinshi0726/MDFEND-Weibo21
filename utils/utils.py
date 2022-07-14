@@ -4,7 +4,7 @@ import numpy as np
 class Recorder():
 
     def __init__(self, early_step):
-        self.max = {'metric': 0}
+        self.max = {'fscore': 0}
         self.cur = {'metric': 0}
         self.maxindex = 0
         self.curindex = 0
@@ -17,8 +17,8 @@ class Recorder():
         return self.judge()
 
     def judge(self):
-        if self.cur['metric'] > self.max['metric']:
-            self.max = self.cur
+        if self.cur['症状']['fscore'] > self.max['fscore']:
+            self.max['fscore'] = self.cur['症状']['fscore']
             self.maxindex = self.curindex
             self.showfinal()
             return 'save'
@@ -40,7 +40,7 @@ def metrics(y_true, y_pred, category, category_dict):
         res_by_category[k] = {"y_true": [], "y_pred": []}
 
     for i, c in enumerate(category):
-        c = reverse_category_dict[c]
+        c = reverse_category_dict[c[0]]
         res_by_category[c]['y_true'].append(y_true[i])
         res_by_category[c]['y_pred'].append(y_pred[i])
 
@@ -54,12 +54,12 @@ def metrics(y_true, y_pred, category, category_dict):
                 'auc': 0
             }
 
-    metrics_by_category['auc'] = roc_auc_score(y_true, y_pred, average='macro')
-    y_pred = np.around(np.array(y_pred)).astype(int)
-    metrics_by_category['metric'] = f1_score(y_true, y_pred, average='macro')
-    metrics_by_category['recall'] = recall_score(y_true, y_pred, average='macro')
-    metrics_by_category['precision'] = precision_score(y_true, y_pred, average='macro')
-    metrics_by_category['acc'] = accuracy_score(y_true, y_pred)
+    # metrics_by_category['auc'] = roc_auc_score(y_true, y_pred, average='macro')
+    # y_pred = np.around(np.array(y_pred)).astype(int)
+    # metrics_by_category['metric'] = f1_score(y_true, y_pred, average='macro')
+    # metrics_by_category['recall'] = recall_score(y_true, y_pred, average='macro')
+    # metrics_by_category['precision'] = precision_score(y_true, y_pred, average='macro')
+    # metrics_by_category['acc'] = accuracy_score(y_true, y_pred)
     
     for c, res in res_by_category.items():
         try:
@@ -84,10 +84,10 @@ def metrics(y_true, y_pred, category, category_dict):
 def data2gpu(batch, use_cuda):
     if use_cuda:
         batch_data = {
-            'content': batch[0].cuda(),
-            'content_masks': batch[1].cuda(),
-            'label': batch[2].cuda(),
-            'category': batch[3].cuda()
+            'content': [sample[0].cuda() for sample in batch],
+            'content_masks': [sample[1].cuda() for sample in batch],
+            'label': [sample[2].cuda() for sample in batch],
+            'category': [sample[3].cuda() for sample in batch]
             }
     else:
         batch_data = {

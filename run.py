@@ -47,15 +47,10 @@ class Run():
         self.test_path = self.root_path + 'test.pkl'
 
         self.category_dict = {
-            "科技": 0,  
-            "军事": 1,  
-            "教育考试": 2,  
-            "灾难事故": 3,  
-            "政治": 4,  
-            "医药健康": 5,  
-            "财经商业": 6,  
-            "文体娱乐": 7,  
-            "社会生活": 8
+            "症状": 0,  
+            "检查": 1,  
+            "手术": 2,  
+            "其他信息": 3
         }
 
     def get_dataloader(self):

@@ -37,9 +37,9 @@ class MultiDomainFENDModel(torch.nn.Module):
         self.classifier = MLP(320, mlp_dims, dropout)
         
     
-    def forward(self, **kwargs):
-        inputs = kwargs['content']
-        masks = kwargs['content_masks']
+    def forward(self,batch_size,**kwargs):
+        inputs = torch.stack(kwargs['content'])
+        masks = torch.stack(kwargs['content_masks'])
         category = kwargs['category']
         if self.emb_type == "bert":
             init_feature = self.bert(inputs, attention_mask = masks)[0]
@@ -47,9 +47,14 @@ class MultiDomainFENDModel(torch.nn.Module):
             init_feature = inputs
         
         feature, _ = self.attention(init_feature, masks)
-        idxs = torch.tensor([index for index in category]).view(-1, 1).cuda()
-        domain_embedding = self.domain_embedder(idxs).squeeze(1)
+        domain_embeddings = list()
+        for i in range(4):
+            domain_embeddings.append(self.domain_embedder(torch.tensor([i]).cuda()).squeeze(1))
 
+        domain_embedding = domain_embeddings[0]
+        for i in range(1,4):
+            domain_embedding += domain_embeddings[i]
+        domain_embedding = domain_embedding.repeat(batch_size,1)
         gate_input_feature = feature
         gate_input = torch.cat([domain_embedding, gate_input_feature], dim = -1)
         gate_value = self.gate(gate_input)
@@ -60,8 +65,7 @@ class MultiDomainFENDModel(torch.nn.Module):
             shared_feature += (tmp_feature * gate_value[:, i].unsqueeze(1))
 
         label_pred = self.classifier(shared_feature)
-
-        return torch.sigmoid(label_pred.squeeze(1))
+        return torch.sigmoid(label_pred)
 
 class Trainer():
     def __init__(self,
@@ -125,8 +129,8 @@ class Trainer():
                 label = batch_data['label']
                 category = batch_data['category']
                 optimizer.zero_grad()
-                label_pred = self.model(**batch_data)
-                loss =  loss_fn(label_pred, label.float()) 
+                label_pred = self.model(len(batch_data['content']),**batch_data)
+                loss =  loss_fn(label_pred, torch.stack(label).float()) 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -161,10 +165,10 @@ class Trainer():
                 batch_data = data2gpu(batch, self.use_cuda)
                 batch_label = batch_data['label']
                 batch_category = batch_data['category']
-                batch_label_pred = self.model(**batch_data)
+                batch_label_pred = self.model(len(batch_data['content']),**batch_data)
 
-                label.extend(batch_label.detach().cpu().numpy().tolist())
+                label.extend(torch.stack(batch_label).detach().cpu().numpy().tolist())
                 pred.extend(batch_label_pred.detach().cpu().numpy().tolist())
-                category.extend(batch_category.detach().cpu().numpy().tolist())
+                category.extend(torch.stack(batch_category).detach().cpu().numpy().tolist())
         
         return metrics(label, pred, category, self.category_dict)

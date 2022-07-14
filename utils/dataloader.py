@@ -7,7 +7,7 @@ import pickle
 import re
 import jieba
 from transformers import BertTokenizer
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader,Dataset
 from gensim.models.keyedvectors import KeyedVectors, Vocab
 
 def _init_fn(worker_id):
@@ -36,6 +36,18 @@ def word2input(texts, vocab_file, max_len):
         masks[i] = (tokens != mask_token_id)
     return token_ids, masks
 
+class MyDataSet(Dataset):
+    def __init__(self, token_ids, masks, labels, categories):
+        super(MyDataSet, self).__init__()
+        self.token_ids = token_ids
+        self.masks = masks
+        self.labels = labels
+        self.categories = categories
+    def __getitem__(self, index):
+        return self.token_ids[index], self.masks[index], self.labels[index],self.categories[index]
+    def __len__(self):
+        return len(self.token_ids)
+
 class bert_data():
     def __init__(self, max_len, batch_size, vocab_file, category_dict, num_workers=2):
         self.max_len = max_len
@@ -47,10 +59,13 @@ class bert_data():
     def load_data(self, path, shuffle):
         self.data = df_filter(read_pkl(path))
         content = self.data['content'].to_numpy()
-        label = torch.tensor(self.data['label'].astype(int).to_numpy())
-        category = torch.tensor(self.data['category'].apply(lambda c: self.category_dict[c]).to_numpy())
+        label = torch.zeros([len(content),71])
+        for idx,s in enumerate(self.data['label']):
+            for l in s:
+                label[idx][l] = 1
+        category = [torch.tensor([0,1,2,3]) for _ in (self.data['category'])]
         content_token_ids, content_masks = word2input(content, self.vocab_file, self.max_len)
-        dataset = TensorDataset(content_token_ids,
+        dataset = MyDataSet(content_token_ids,
                                 content_masks,
                                 label,
                                 category
@@ -61,7 +76,8 @@ class bert_data():
             num_workers=self.num_workers,
             pin_memory=True,
             shuffle=shuffle,
-            worker_init_fn=_init_fn
+            worker_init_fn=_init_fn,
+            collate_fn=lambda x: x
         )
         return dataloader
 

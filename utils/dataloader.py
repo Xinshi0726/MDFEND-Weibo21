@@ -37,14 +37,14 @@ def word2input(texts, vocab_file, max_len):
     return token_ids, masks
 
 class MyDataSet(Dataset):
-    def __init__(self, token_ids, masks, labels, categories):
+    def __init__(self, token_ids, masks, labels,label_index):
         super(MyDataSet, self).__init__()
         self.token_ids = token_ids
         self.masks = masks
         self.labels = labels
-        self.categories = categories
+        self.label_index = label_index
     def __getitem__(self, index):
-        return self.token_ids[index], self.masks[index], self.labels[index],self.categories[index]
+        return self.token_ids[index], self.masks[index], self.labels[index], self.label_index[index]
     def __len__(self):
         return len(self.token_ids)
 
@@ -55,7 +55,7 @@ class bert_data():
         self.num_workers = num_workers
         self.vocab_file = vocab_file
         self.category_dict = category_dict
-    
+
     def load_data(self, path, shuffle):
         self.data = df_filter(read_pkl(path))
         content = self.data['content'].to_numpy()
@@ -63,12 +63,11 @@ class bert_data():
         for idx,s in enumerate(self.data['label']):
             for l in s:
                 label[idx][l] = 1
-        category = [torch.tensor([0,1,2,3]) for _ in (self.data['category'])]
         content_token_ids, content_masks = word2input(content, self.vocab_file, self.max_len)
         dataset = MyDataSet(content_token_ids,
                                 content_masks,
                                 label,
-                                category
+                                self.data['label']
                                 )
         dataloader = DataLoader(
             dataset=dataset,

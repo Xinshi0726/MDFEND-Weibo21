@@ -71,5 +71,5 @@ config = {
 
 
 if __name__ == '__main__':
-    Run(config = config
+     Run(config = config
         ).main()

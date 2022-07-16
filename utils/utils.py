@@ -31,10 +31,11 @@ class Recorder():
     def showfinal(self):
         print("Max", self.max)
 
-def metrics(y_true, y_pred, category, category_dict):
+def metrics(y_true, y_pred, category_dict):
     res_by_category = {}
     metrics_by_category = {}
     reverse_category_dict = {}
+    category = [[0,1,2,3]]*len(y_true)
     for k, v in category_dict.items():
         reverse_category_dict[v] = k
         res_by_category[k] = {"y_true": [], "y_pred": []}
@@ -86,15 +87,13 @@ def data2gpu(batch, use_cuda):
         batch_data = {
             'content': [sample[0].cuda() for sample in batch],
             'content_masks': [sample[1].cuda() for sample in batch],
-            'label': [sample[2].cuda() for sample in batch],
-            'category': [sample[3].cuda() for sample in batch]
+            'label': [sample[2].cuda() for sample in batch]
             }
     else:
         batch_data = {
             'content': batch[0],
             'content_masks': batch[1],
             'label': batch[2],
-            'category': batch[3]
             }
     return batch_data
 
